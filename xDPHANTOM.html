@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exosky Viewer</title>
+    <style>
+        body {
+            background-color: black;
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            height: 100vh; /* Ensure body takes full viewport height */
+        }
+        #canvas {
+            cursor: pointer; 
+            width: 100vw; /* Full width of viewport */
+            height: 100vh; /* Full height of viewport */
+            display: none; /* Hide canvas initially */
+        }
+        #intro {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: black; /* Keep black background for intro */
+            color: white;
+            font-size: 48px;
+            text-align: center;
+        }
+        .tooltip {
+            position: absolute;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 5px;
+            border-radius: 5px;
+            display: none; /* Initially hidden */
+            pointer-events: none; /* Prevents tooltip from blocking mouse events */
+        }
+    </style>
+</head>
+<body>
+    <div id="intro">Exosky Viewer by xDPHANTOM</div>
+    <canvas id="canvas"></canvas>
+    <div id="tooltip" class="tooltip"></div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const tooltip = document.getElementById('tooltip');
+        const intro = document.getElementById('intro');
+
+        const backgroundImage = new Image();
+        backgroundImage.src = 'file:///C:/Users/NMCSA/Downloads/B148A219-205E-4E25-A68D-842B3AF052E0.webp'; // Replace with your space image URL
+
+        const backgroundTransparency = 0.5; // Control transparency (0 = fully transparent, 1 = fully opaque)
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;  // Set canvas width to full window width
+            canvas.height = window.innerHeight; // Set canvas height to full window height
+        }
+
+        resizeCanvas(); // Initial canvas size
+
+        const exoplanets = [];
+        for (let i = 1; i <= 100; i++) {
+            exoplanets.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                radius: 2,
+                hoverRadius: 5,
+                color: 'white',
+                description: `Exoplanet ${i}: A unique world with distinct characteristics.`,
+                perspective: { 
+                    description: getRandomDescription(i),
+                    stars: Math.floor(Math.random() * 20) + 5 // Random number of stars
+                }
+            });
+        }
+
+        function getRandomDescription(planetNumber) {
+            const descriptions = [
+                `Exoplanet ${planetNumber}: A frozen world where temperatures are far below freezing. Life here could only survive under deep layers of ice, sheltered from cosmic radiation.`,
+                `Exoplanet ${planetNumber}: This planet is a gas giant, similar to Jupiter. Its massive storms, with winds over 1,000 km/h, dominate the landscape, while mysterious floating lifeforms drift in the upper atmosphere.`,
+                `Exoplanet ${planetNumber}: A desert world with vast seas of sand and towering dunes. Occasional flash floods carve temporary rivers into the ground during rare planetary storms.`,
+                `Exoplanet ${planetNumber}: An ocean world where the entire surface is covered in deep, dark water. Strange bioluminescent creatures swim through the depths, illuminating the otherwise pitch-black oceans.`,
+                `Exoplanet ${planetNumber}: This world orbits a dying star, giving it a red, eerie glow. The atmosphere is thick with poisonous gases, and the surface is littered with ancient craters.`,
+                `Exoplanet ${planetNumber}: A planet with a rocky surface covered in volcanoes. Constant eruptions spew ash and lava, giving it the appearance of an ever-burning inferno.`,
+                `Exoplanet ${planetNumber}: A world with two suns, bathing the surface in perpetual daylight. Its inhabitants have evolved to endure the extreme temperatures and constant solar radiation.`,
+                `Exoplanet ${planetNumber}: A world locked in a tidal orbit, where one side is always in darkness and the other in perpetual light. Creatures on this planet have adapted to survive in the narrow twilight zone.`,
+                `Exoplanet ${planetNumber}: A planet covered in forests of towering, bizarre plant life. These plants seem to communicate via chemical signals, creating a network of life that spans the entire globe.`,
+                `Exoplanet ${planetNumber}: A small, dense planet with high gravity. Any life that exists here would be incredibly strong and low to the ground to survive the immense gravitational pull.`,
+                `Exoplanet ${planetNumber}: This world orbits a black hole, distorting space-time. From this planet’s perspective, time flows slower compared to the rest of the universe.`,
+                `Exoplanet ${planetNumber}: A methane-rich planet with thick, orange clouds. The atmosphere is so dense that no sunlight penetrates it, leaving the surface in perpetual darkness.`,
+                `Exoplanet ${planetNumber}: A super-Earth, with vast mountain ranges and deep canyons. The atmosphere is thin, requiring any life to be extremely hardy and capable of surviving on minimal resources.`,
+                `Exoplanet ${planetNumber}: A planet with extreme seasonal changes. Winters last decades, and the summers are scorching hot, forcing life to adapt to long periods of dormancy.`,
+                `Exoplanet ${planetNumber}: This planet has rings similar to Saturn, but they are much larger and more colorful. Its moons are rich with resources, possibly hosting primitive life.`,
+                `Exoplanet ${planetNumber}: A planet orbiting a red dwarf star. The low light gives the surface an eerie glow, and plant life here has evolved to utilize infrared light for photosynthesis.`,
+                `Exoplanet ${planetNumber}: A world with massive floating landmasses, drifting in the air. Its surface is a mix of floating islands and vast oceans below.`,
+                `Exoplanet ${planetNumber}: A world constantly bombarded by meteors. The surface is pockmarked with craters, and any life here would need to constantly shelter underground.`,
+                `Exoplanet ${planetNumber}: A rogue planet, drifting through space without a star. The surface is frozen solid, and any life here would need to generate its own heat to survive.`,
+                `Exoplanet ${planetNumber}: A dense, foggy world where visibility is limited to just a few meters. Strange sounds echo across the landscape, and the source remains unknown to explorers.`
+            ];
+
+            return descriptions[planetNumber % descriptions.length];
+        }
+
+        let currentPerspective = null;
+
+        function drawExoplanets(hoveredPlanet = null) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.globalAlpha = backgroundTransparency; // Set the global alpha for transparency
+            ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height); // Draw the background image
+            ctx.globalAlpha = 1; // Reset alpha to default for other drawings
+
+            exoplanets.forEach((planet, index) => {
+                ctx.beginPath();
+                const radius = planet === hoveredPlanet ? planet.hoverRadius : planet.radius;
+                ctx.arc(planet.x, planet.y, radius, 0, 2 * Math.PI);
+                ctx.fillStyle = planet.color; // Use the planet's color (white)
+                ctx.fill();
+                ctx.closePath();
+            });
+        }
+
+        function showPerspective(planet) {
+            currentPerspective = planet; // Save the current perspective
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.globalAlpha = backgroundTransparency; // Set the global alpha for transparency
+            ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height); // Draw the background image
+            ctx.globalAlpha = 1; // Reset alpha to default for other drawings
+
+            // Draw stars based on the perspective
+            for (let i = 0; i < planet.perspective.stars; i++) {
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * canvas.height;
+                ctx.beginPath();
+                ctx.arc(x, y, Math.random() * 2 + 1, 0, 2 * Math.PI);
+                ctx.fillStyle = 'white';  // Change star color to white
+                ctx.fill();
+                ctx.closePath();
+            }
+
+            ctx.fillStyle = 'white'; // Change text color to white
+            ctx.font = '24px Arial';
+            ctx.fillText(planet.perspective.description, 50, 50);
+            ctx.fillText(planet.description, 50, 100); // Show the description of the exoplanet
+            ctx.fillText("Press 'E' to return to main view", 50, 150);
+        }
+
+        function showTooltip(planet, mouseX, mouseY) {
+            tooltip.innerText = `Exoplanet ${exoplanets.indexOf(planet) + 1}`; // Show exoplanet number
+            tooltip.style.left = `${mouseX}px`;
+            tooltip.style.top = `${mouseY}px`;
+            tooltip.style.display = 'block'; // Show tooltip
+        }
+
+        function hideTooltip() {
+            tooltip.style.display = 'none'; // Hide tooltip
+        }
+
+        canvas.addEventListener('mousemove', (event) => {
+            const mouseX = event.clientX;
+            const mouseY = event.clientY;
+
+            let hoveredPlanet = null;
+            exoplanets.forEach(planet => {
+                const distance = Math.hypot(planet.x - mouseX, planet.y - mouseY);
+                if (distance < planet.hoverRadius) {
+                    hoveredPlanet = planet; // Found the hovered planet
+                }
+            });
+
+            if (hoveredPlanet) {
+                showTooltip(hoveredPlanet, mouseX + 10, mouseY + 10); // Display tooltip next to the mouse cursor
+                drawExoplanets(hoveredPlanet); // Draw the hovered planet
+            } else {
+                hideTooltip();
+                drawExoplanets(); // Draw without any hovered planet
+            }
+        });
+
+        // Other parts of your code remain unchanged...
+
+canvas.addEventListener('click', (event) => {
+    if (!currentPerspective) { // Only allow clicking if not in perspective view
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = event.clientX - rect.left;
+        const mouseY = event.clientY - rect.top;
+
+        // Check for planet clicks
+        exoplanets.forEach(planet => {
+            const dx = mouseX - planet.x;
+            const dy = mouseY - planet.y;
+            if (Math.sqrt(dx * dx + dy * dy) < planet.radius) {
+                showPerspective(planet);
+            }
+        });
+    }
+});
+
+// Removed the perspective reset logic from mousemove event
+canvas.addEventListener('mousemove', (event) => {
+    if (!currentPerspective) { // Only allow hover effects if not in perspective view
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = event.clientX - rect.left;
+        const mouseY = event.clientY - rect.top;
+
+        let isHovering = false;
+        let hoveredPlanet = null;
+
+        // Check for planet hover
+        exoplanets.forEach(planet => {
+            const dx = mouseX - planet.x;
+            const dy = mouseY - planet.y;
+            if (Math.sqrt(dx * dx + dy * dy) < planet.radius) {
+                showTooltip(planet, mouseX, mouseY);
+                hoveredPlanet = planet;
+                isHovering = true;
+            }
+        });
+
+        drawExoplanets(hoveredPlanet); // Draw planets, highlighting the hovered one
+
+        if (!isHovering) {
+            hideTooltip(); // Hide tooltip if not hovering over any planet
+        }
+    }
+});
+
+// Event listener for key press
+window.addEventListener('keydown', (event) => {
+    if (event.key === 'e' && currentPerspective) { // If 'E' is pressed and in perspective view
+        currentPerspective = null; // Reset perspective
+        drawExoplanets(); // Redraw the exoplanets
+    }
+});
+
+// Initial call to draw exoplanets
+drawExoplanets();
+
+
+        backgroundImage.onload = () => {
+            setTimeout(() => {
+                intro.style.display = 'none'; // Hide intro after a set time
+                canvas.style.display = 'block'; // Show canvas
+                drawExoplanets(); // Initial drawing of exoplanets
+            }, 2000); // 3 seconds
+        };
+
+        window.addEventListener('resize', resizeCanvas); // Resize canvas on window resize
+    </script>
+</body>
+</html>
